@@ -1,0 +1,22 @@
+# Ambiente virtual
+.venv/
+venv/
+
+# Arquivos Python temporários
+__pycache__/
+*.py[cod]
+
+# Variáveis de ambiente e segredos
+.env
+.env.*
+
+# Permitir arquivo de exemplo de configuração
+!.env.example
+
+# Configurações locais do editor
+.vscode/
+
+# Arquivos de teste e cobertura
+.pytest_cache/
+.coverage
+htmlcov/
