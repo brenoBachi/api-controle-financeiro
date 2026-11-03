@@ -1,15 +1,59 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database import conectar
 from models.movimentacao import Movimentacao
 from schemas.movimentacao import MovimentacaoCreate, MovimentacaoResponse
 
+from typing import Literal
+from datetime import date
+from sqlalchemy import func
+
 
 router = APIRouter(
     prefix="/movimentacoes",
     tags=["Movimentações"]
 )
+
+# Consultar Saldo
+@router.get("/saldo")
+def consultar_saldo(
+    data_inicio: date | None = None,
+    data_fim: date | None = None,
+    db: Session = Depends(conectar)
+):
+    consulta_receitas = db.query(func.sum(Movimentacao.valor)).filter(
+        Movimentacao.tipo == "receita"
+    )
+
+    consulta_despesas = db.query(func.sum(Movimentacao.valor)).filter(
+        Movimentacao.tipo == "despesa"
+    )
+
+    if data_inicio:
+        consulta_receitas = consulta_receitas.filter(
+            Movimentacao.data >= data_inicio
+        )
+        consulta_despesas = consulta_despesas.filter(
+            Movimentacao.data >= data_inicio
+        )
+
+    if data_fim:
+        consulta_receitas = consulta_receitas.filter(
+            Movimentacao.data <= data_fim
+        )
+        consulta_despesas = consulta_despesas.filter(
+            Movimentacao.data <= data_fim
+        )
+
+    receitas = consulta_receitas.scalar() or 0
+    despesas = consulta_despesas.scalar() or 0
+
+    return {
+        "total_receitas": receitas,
+        "total_despesas": despesas,
+        "saldo": receitas - despesas
+    }
 
 # Criar Movimentação
 @router.post(
@@ -31,8 +75,29 @@ def criar_movimentacao(
 
 # Listar Movimentações
 @router.get("/", response_model=list[MovimentacaoResponse])
-def listar_movimentacoes(db: Session = Depends(conectar)):
-    movimentacoes = db.query(Movimentacao).all()
+def listar_movimentacoes(
+    tipo: Literal["receita", "despesa"] | None = None,
+    data_inicio: date | None = None,
+    data_fim: date | None = None,
+    limit: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(conectar)
+):
+    consulta = db.query(Movimentacao)
+
+    if tipo:
+        consulta = consulta.filter(Movimentacao.tipo == tipo)
+
+    if data_inicio:
+        consulta = consulta.filter(Movimentacao.data >= data_inicio)
+
+    if data_fim:
+        consulta = consulta.filter(Movimentacao.data <= data_fim)
+
+    movimentacoes = consulta.order_by(
+        Movimentacao.id
+    ).offset(offset).limit(limit).all()
+
     return movimentacoes
 
 # Buscar Movimentação por ID
@@ -98,3 +163,4 @@ def excluir_movimentacao(
 
     db.delete(movimentacao)
     db.commit()
+
