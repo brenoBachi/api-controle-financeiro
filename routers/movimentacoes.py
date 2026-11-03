@@ -3,7 +3,11 @@ from sqlalchemy.orm import Session
 
 from database import conectar
 from models.movimentacao import Movimentacao
-from schemas.movimentacao import MovimentacaoCreate, MovimentacaoResponse
+from schemas.movimentacao import (
+    MovimentacaoCreate,
+    MovimentacaoResponse,
+    MovimentacaoPaginada
+)
 
 from typing import Literal
 from datetime import date
@@ -74,7 +78,7 @@ def criar_movimentacao(
     return nova_movimentacao
 
 # Listar Movimentações
-@router.get("/", response_model=list[MovimentacaoResponse])
+@router.get("/", response_model=MovimentacaoPaginada)
 def listar_movimentacoes(
     tipo: Literal["receita", "despesa"] | None = None,
     data_inicio: date | None = None,
@@ -83,6 +87,13 @@ def listar_movimentacoes(
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(conectar)
 ):
+
+    if data_inicio and data_fim and data_inicio > data_fim:
+        raise HTTPException(
+            status_code=400,
+            detail="A data inicial não pode ser posterior à data final"
+    )
+
     consulta = db.query(Movimentacao)
 
     if tipo:
@@ -94,11 +105,20 @@ def listar_movimentacoes(
     if data_fim:
         consulta = consulta.filter(Movimentacao.data <= data_fim)
 
+    total = consulta.count()
+    total_paginas = (total + limit - 1) // limit
+
     movimentacoes = consulta.order_by(
         Movimentacao.id
     ).offset(offset).limit(limit).all()
 
-    return movimentacoes
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "total_paginas": total_paginas,
+        "movimentacoes": movimentacoes
+    }
 
 # Buscar Movimentação por ID
 @router.get("/{movimentacao_id}", response_model=MovimentacaoResponse)

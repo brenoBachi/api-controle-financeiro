@@ -16,3 +16,10 @@ class MovimentacaoResponse(MovimentacaoBase):
 
     class Config:
         from_attributes = True
+
+class MovimentacaoPaginada(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    total_paginas: int
+    movimentacoes: list[MovimentacaoResponse]
