@@ -13,6 +13,8 @@ from typing import Literal
 from datetime import date
 from sqlalchemy import func
 
+from models.categorias import Categoria
+
 
 router = APIRouter(
     prefix="/movimentacoes",
@@ -76,6 +78,16 @@ def criar_movimentacao(
     movimentacao: MovimentacaoCreate,
     db: Session = Depends(conectar)
 ):
+    categoria = db.query(Categoria).filter(
+        Categoria.id == movimentacao.categoria_id
+    ).first()
+
+    if not categoria:
+        raise HTTPException(
+            status_code=404,
+            detail="Categoria não encontrada"
+    )
+
     nova_movimentacao = Movimentacao(**movimentacao.model_dump())
 
     db.add(nova_movimentacao)

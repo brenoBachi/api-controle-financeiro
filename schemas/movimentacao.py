@@ -7,12 +7,14 @@ class MovimentacaoBase(BaseModel):
     valor: float = Field(gt=0)
     tipo: Literal["receita", "despesa"]
     data: date
+    categoria_id: int
 
 class MovimentacaoCreate(MovimentacaoBase):
     pass
 
 class MovimentacaoResponse(MovimentacaoBase):
     id: int
+    categoria: CategoriaResumo
 
     class Config:
         from_attributes = True
@@ -23,3 +25,10 @@ class MovimentacaoPaginada(BaseModel):
     offset: int
     total_paginas: int
     movimentacoes: list[MovimentacaoResponse]
+
+class CategoriaResumo(BaseModel):
+    id: int
+    nome: str
+
+    class Config:
+        from_attributes = True
