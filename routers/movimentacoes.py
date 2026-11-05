@@ -26,6 +26,13 @@ def consultar_saldo(
     data_fim: date | None = None,
     db: Session = Depends(conectar)
 ):
+
+    if data_inicio and data_fim and data_inicio > data_fim:
+        raise HTTPException(
+            status_code=400,
+            detail="A data inicial não pode ser posterior à data final"
+        )
+
     consulta_receitas = db.query(func.sum(Movimentacao.valor)).filter(
         Movimentacao.tipo == "receita"
     )
